@@ -1,10 +1,8 @@
 /*
   ==============================================================================
-
     KOTempo.cpp
     Created: 26 Sep 2022 8:20:00pm
     Author:  Levi
-
   ==============================================================================
 */
 
@@ -34,63 +32,169 @@ void KOTempo::prepare(float bpm)
     BPM = bpm;
 }
 
-//The rest of the methods return the HZ duration of the particular type of note given the current BPM. For instance, a quarter note at 60 BPM is 1 hz.
-float KOTempo ::getWholeNote()
+//set the samplerate as well if you want the ms duration of notes. 
+void KOTempo::prepare(float bpm, float samplerate)
 {
-    return BPM / 240;
+    BPM = bpm;
+    sampleRate = samplerate;
 }
 
-float KOTempo ::getHalfNote()
+float KOTempo::getNoteLengthHertz(NoteTypes type)
 {
-    return BPM / 120;
+    switch (type) 
+    {
+    case NoteTypes::Whole:
+        return BPM / 240;
+        break;
+    case NoteTypes::Half:
+        return BPM / 120;
+        break;
+    case NoteTypes::DottedHalf:
+        return  (BPM / 120) + (BPM / 240);
+        break;
+    case NoteTypes::Quarter:
+        return BPM / 60;
+        break;
+    case NoteTypes::DottedQuarter:
+        return BPM / 90;
+        break;
+    case NoteTypes::TripletQuarter:
+        return BPM / 40;
+        break;
+    case NoteTypes::Eighth:
+        return BPM / 30;
+        break;
+    case NoteTypes::DottedEighth:
+        return BPM / 45;
+        break;
+    case NoteTypes::TripletEighth:
+        return BPM / 20;
+        break;
+    case NoteTypes::Sixteenth:
+        return BPM / 15;
+        break;
+    case NoteTypes::DottedSixteenth:
+        return BPM / 22.5;
+        break;
+    case NoteTypes::TripletSixteenth:
+        return BPM / 10;
+        break;
+    default:
+        DBG("not given valid NoteType in getNoteLengthHertz");
+        break;
+    }
 }
 
-float KOTempo  ::getDottedHalfNote()
+//returns the length of a note in samples, ie a whole note at 60 bpm at a 44100 samplerate will be 44100 samples long.
+float KOTempo::getNoteLengthSamples(NoteTypes type)
 {
-    return  (BPM / 120) + (BPM / 240);
+    // Convert bpm to beats per second
+    double beatsPerSecond = BPM / 60.0;
+
+    // Calculate the duration of a single beat in seconds
+    double beatDuration = 1.0 / beatsPerSecond;
+
+    // Calculate the duration of the given note in seconds
+    double noteDuration = 0;
+    switch (type) {
+    case NoteTypes::Whole:
+        noteDuration = beatDuration * 4;
+        break;
+    case NoteTypes::Half:
+        noteDuration = beatDuration * 2;
+        break;
+    case NoteTypes::DottedHalf:
+        noteDuration = beatDuration * 3;
+        break;
+    case NoteTypes::Quarter:
+        noteDuration = beatDuration;
+        break;
+    case NoteTypes::DottedQuarter:
+        noteDuration = beatDuration * 1.5;
+        break;
+    case NoteTypes::TripletQuarter:
+        noteDuration = beatDuration * 2.0 / 3.0;
+        break;
+    case NoteTypes::Eighth:
+        noteDuration = beatDuration / 2;
+        break;
+    case NoteTypes::DottedEighth:
+        noteDuration = beatDuration * 3.0 / 4.0;
+        break;
+    case NoteTypes::TripletEighth:
+        noteDuration = beatDuration / 3;
+        break;
+    case NoteTypes::Sixteenth:
+        noteDuration = beatDuration / 4;
+        break;
+    case NoteTypes::DottedSixteenth:
+        noteDuration = beatDuration * 3.0 / 8.0;
+        break;
+    case NoteTypes::TripletSixteenth:
+        noteDuration = beatDuration / 6;
+        break;
+    default:
+        DBG("not given valid NoteType in getNoteLengthHertz");
+        break;
+    }
+
+    // Convert the duration from seconds to samples and return it
+    return round(noteDuration * sampleRate);
 }
 
-float KOTempo  ::getQuarterNote()
+//Returns the length of a note in milliseconds
+float KOTempo::getNoteLengthMS(NoteTypes type)
 {
-    return BPM / 60;
-}
+    // Convert bpm to beats per second
+    double beatsPerSecond = BPM / 60.0;
 
-float KOTempo  ::getDottedQuarterNote()
-{
-    return BPM / 90;
-}
+    // Calculate the duration of a single beat in seconds
+    double beatDuration = 1.0 / beatsPerSecond;
 
-float KOTempo  ::getTripletQuarterNote()
-{
-    return BPM / 40;
-}
+    // Calculate the duration of the given note in seconds
+    double noteDuration = 0;
+    switch (type) {
+    case NoteTypes::Whole:
+        noteDuration = beatDuration * 4;
+        break;
+    case NoteTypes::Half:
+        noteDuration = beatDuration * 2;
+        break;
+    case NoteTypes::DottedHalf:
+        noteDuration = beatDuration * 3;
+        break;
+    case NoteTypes::Quarter:
+        noteDuration = beatDuration;
+        break;
+    case NoteTypes::DottedQuarter:
+        noteDuration = beatDuration * 1.5;
+        break;
+    case NoteTypes::TripletQuarter:
+        noteDuration = beatDuration * 2.0 / 3.0;
+        break;
+    case NoteTypes::Eighth:
+        noteDuration = beatDuration / 2;
+        break;
+    case NoteTypes::DottedEighth:
+        noteDuration = beatDuration * 3.0 / 4.0;
+        break;
+    case NoteTypes::TripletEighth:
+        noteDuration = beatDuration / 3;
+        break;
+    case NoteTypes::Sixteenth:
+        noteDuration = beatDuration / 4;
+        break;
+    case NoteTypes::DottedSixteenth:
+        noteDuration = beatDuration * 3.0 / 8.0;
+        break;
+    case NoteTypes::TripletSixteenth:
+        noteDuration = beatDuration / 6;
+        break;
+    default:
+        DBG("Not given valid notetype in getNoteLengthMS");
+        break;
+    }
 
-float KOTempo  ::getEighthNote()
-{
-    return BPM / 30;
-}
-
-float KOTempo  ::getDottedEighthNote()
-{
-    return BPM / 45;
-}
-
-float KOTempo  ::getTripletEighthNote()
-{
-    return BPM / 20;
-}
-
-float KOTempo  ::getSixteenthNote()
-{
-    return BPM / 15;
-}
-
-float KOTempo  ::getDottedSixteenthNote()
-{
-    return BPM / 22.5;
-}
-
-float KOTempo  ::getTripletSixteenthNote()
-{
-    return BPM / 10;
+    // Convert the duration from seconds to milliseconds and return it
+    return round(noteDuration * 1000);
 }

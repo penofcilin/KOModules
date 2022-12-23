@@ -1,59 +1,102 @@
+/*
+  ==============================================================================
+
+    KOLFO.cpp
+    Created: 5 Dec 2022 6:29:02pm
+    Author:  Levi
+
+  ==============================================================================
+*/
+
 #include "KOLFO.h"
-
-//Prepares the samplerate, period, and current time variables.
-void KOLFO::prepare(const juce::dsp::ProcessSpec& spec)
+//There are two of these because you need to set the sampleRate to the frequency with which you'll be accessing the LFO.
+//If you're just doing it in your regular process block, define sampleRate to be your samplerate / buffersize
+//If you're gonna be processing it within the buffer/sample loop, just give it a regular spec
+void  KOLFO::prepare(const juce::dsp::ProcessSpec& spec)
 {
-	sampleRate = spec.sampleRate;
-	period = 1.f / sampleRate;
-	currentTime = 0.f;
+    sampleRate = spec.sampleRate / spec.maximumBlockSize;
+    reset();
 }
 
-//Sets the current time (phase) to 0.
-void KOLFO::reset()
+void  KOLFO::prepare(const float customSampleRate)
 {
-	currentTime = 0;
+    sampleRate = customSampleRate;
+
+    reset();
 }
 
-
-//Applies the waveFunction to get the next value out of the LFO.
-//Formula is 
-float KOLFO::getNextValue()
+void  KOLFO::reset()
 {
-	if (currentTime >= 1.f)
-		currentTime = 0.f;
-	float value = std::sin(juce::MathConstants<float>::twoPi * frequency * currentTime + 0.f);
-	currentTime += period;
-	return value;
+    phase.reset();
 }
 
-//Returns Frequency
-float KOLFO::getFrequency()
+//Set Wave Function for Lfo
+void  KOLFO::initialise(const std::function<float(float)>& function,
+                        size_t lookupTableNumPoints)
 {
-	return frequency;
+    if (lookupTableNumPoints != 0)
+    {
+        auto* table = new juce::dsp::LookupTableTransform<float>(function, -juce::MathConstants<float>::pi, juce::MathConstants<float>::pi,
+                                                                 lookupTableNumPoints);
+
+        lookupTable.reset(table);
+        generator = [table](float x) { return (*table) (x); };
+    }
+    else
+    {
+        //This one is the part that I use, simply sets the wavefunction to whatever function is passed as arg
+        generator = function;
+    }
 }
 
-//Sets frequency
-void KOLFO::setFrequency(float newFrequency)
+//Returns a number between -1 and 1.
+float  KOLFO::getNextValue()
 {
-	frequency = newFrequency;
+    auto increment = juce::MathConstants<float>::twoPi * NormalizedFrequency;
+    return generator(phase.advance(increment) - juce::MathConstants<float>::pi);
 }
 
-//Sets the wavetype of the LFO to the given type.
-void KOLFO::setWaveType(WaveType newWaveType)
+void  KOLFO::setParameter(ParameterId parameter, float parameterValue)
 {
-	switch (newWaveType)
-	{
-	case(WaveType::Sine):
-		waveFunction = [](float x) {return std::sin(x); };
-		break;
-	case(WaveType::Saw):
-		waveFunction = [](float x) {return x / juce::MathConstants<float>::pi; };
-		break;
-	case(WaveType::NegSaw):
-		waveFunction = [](float x) {return (x / juce::MathConstants<float>::pi) * -1; };
-		break;
-	case(WaveType::Square):
-		waveFunction = [](float x) {return x < 0.0f ? -1.0f : 1.0f; };
-		break;
-	}
+    switch (parameter)
+    {
+    case  KOLFO::ParameterId::Frequency: m_frequency = parameterValue; NormalizedFrequency = parameterValue / sampleRate; break;
+    case  KOLFO::ParameterId::Bypass: m_GlobalBypass = static_cast<bool>(parameterValue); break;
+    }
+}
+
+float  KOLFO::getFrequency()
+{
+    return m_frequency;
+}
+
+void  KOLFO::setWaveType(WaveType newWaveType)
+{
+    switch (newWaveType)
+    {
+    case  KOLFO::WaveType::Sine:
+    {
+        initialise([](float x) {return std::sin(x); });
+        break;
+    }
+    case  KOLFO::WaveType::Saw:
+    {
+        initialise([](float x) {return x / juce::MathConstants<float>::pi; });
+        break;
+    }
+    case  KOLFO::WaveType::SawDown:
+    {
+        initialise([](float x) {return (x / juce::MathConstants<float>::pi) * (-1); });
+        break;
+    }
+    case  KOLFO::WaveType::Square:
+    {
+        initialise([](float x) {return x < 0.0f ? -1.0f : 1.0f; });
+        break;
+    }
+    case  KOLFO::WaveType::Random: //Work in progress, may or may not work idk
+    {
+        initialise([&](float x) {return (x * rando.nextFloat()); });
+    }
+    }
 }

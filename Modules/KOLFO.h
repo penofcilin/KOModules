@@ -1,53 +1,59 @@
 /*
   ==============================================================================
-
     KOLFO.H
     Created: 26 Sep 2022
     Author:  Penofcilin, King of KO Audio
     Purpose: Provides a useful LFO class for use within a JUCE process block.
-
     Adapted from Viator DSP's LFOGenerator Module:
-    https://github.com/landonviator
-
   ==============================================================================
 */
 
-#pragma once
 
+#pragma once
 #ifndef KOLFO_h
 #define KOLFO_h
+
 #include <JuceHeader.h>
 
 class KOLFO
 {
 public:
+
     void prepare(const juce::dsp::ProcessSpec& spec);
 
-    float getNextValue();
+    void prepare(const float customSampleRate);
 
-    float getFrequency();
-    void setFrequency(float newFrequency);
+    void reset();
+
+    
+
+    float getNextValue();
 
     enum class WaveType
     {
         Sine,
         Saw,
-        NegSaw,
-        Square
+        SawDown,
+        Square,
+        //Random
     };
 
+    void setFrequency(float newFrequency);
+    float getFrequency();
     void setWaveType(WaveType newWaveType);
 
-    void reset();
-
 private:
-    float period;
-    float currentTime;
-    float frequency;
+
+    float m_frequency;
     float sampleRate;
+    float NormalizedFrequency;
 
-    std::function<float(float)> waveFunction;
+    juce::Random rando;
 
+    juce::dsp::Phase<float> phase;
 
-};
-#endif /* KOLFO_h */
+    void initialise(const std::function<float(float)>& function);
+    std::function<float(float)> generator;
+}; 
+
+#endif /* KOLFO*/

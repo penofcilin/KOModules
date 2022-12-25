@@ -1,27 +1,16 @@
-/*
-  ==============================================================================
-
-    KOLFO.cpp
-    Created: 5 Dec 2022 6:29:02pm
-    Author:  Levi
-
-  ==============================================================================
-*/
-
 #include "KOLFO.h"
-//There are two of these because you need to set the sampleRate to the frequency with which you'll be accessing the LFO.
-//If you're just doing it in your regular process block, define sampleRate to be your samplerate / buffersize
-//If you're gonna be processing it within the buffer/sample loop, just give it a regular spec
+
+//Use this is you will be using the LFO in your buffer loop
 void  KOLFO::prepare(const juce::dsp::ProcessSpec& spec)
 {
     sampleRate = spec.sampleRate / spec.maximumBlockSize;
     reset();
 }
 
+//Use this for every other case, I.E. calling once per processblock
 void  KOLFO::prepare(const float customSampleRate)
 {
     sampleRate = customSampleRate;
-
     reset();
 }
 
@@ -30,39 +19,28 @@ void  KOLFO::reset()
     phase.reset();
 }
 
-//Set Wave Function for Lfo
-void  KOLFO::initialise(const std::function<float(float)>& function,
-                        size_t lookupTableNumPoints)
+//Set Wave Function for LFO
+void  KOLFO::initialise(const std::function<float(float)>& function)
 {
-    if (lookupTableNumPoints != 0)
-    {
-        auto* table = new juce::dsp::LookupTableTransform<float>(function, -juce::MathConstants<float>::pi, juce::MathConstants<float>::pi,
-                                                                 lookupTableNumPoints);
-
-        lookupTable.reset(table);
-        generator = [table](float x) { return (*table) (x); };
-    }
-    else
-    {
-        //This one is the part that I use, simply sets the wavefunction to whatever function is passed as arg
         generator = function;
-    }
 }
 
-//Returns a number between -1 and 1.
+//Returns the next value the LFO will spit out, which will always be a value between -1 and 1. Basically gives you the current y position of the wave.
+//Some helpful stuff: std::rect() will make it a value between 0 and 1, which is useful for many operations. Adding 1 and dividing by 2 will do the same thing
+//For instance LFO range is -1 to 1, add 1 to that its 0 to 2, times 0.5 its 0 to 1
+//The way you should use this in the buffer loop is to first loop through for as many samples as are in the buffer, fill a vector with the values it spits out, then use it in your actual buffer loop
+//if you don't do that, it will give you weird values because the buffer loop runs for each channel, which messes with the continuity of the wave
 float  KOLFO::getNextValue()
 {
     auto increment = juce::MathConstants<float>::twoPi * NormalizedFrequency;
     return generator(phase.advance(increment) - juce::MathConstants<float>::pi);
 }
 
-void  KOLFO::setParameter(ParameterId parameter, float parameterValue)
+//Sets the frequency of the LFO in hertz
+//If you don't set samplerate correctly, this won't work right
+void KOLFO::setFrequency(float newFrequency)
 {
-    switch (parameter)
-    {
-    case  KOLFO::ParameterId::Frequency: m_frequency = parameterValue; NormalizedFrequency = parameterValue / sampleRate; break;
-    case  KOLFO::ParameterId::Bypass: m_GlobalBypass = static_cast<bool>(parameterValue); break;
-    }
+    m_frequency = newFrequency; NormalizedFrequency = newFrequency/ sampleRate;
 }
 
 float  KOLFO::getFrequency()
@@ -94,9 +72,9 @@ void  KOLFO::setWaveType(WaveType newWaveType)
         initialise([](float x) {return x < 0.0f ? -1.0f : 1.0f; });
         break;
     }
-    case  KOLFO::WaveType::Random: //Work in progress, may or may not work idk
+    /*case  KOLFO::WaveType::Random:
     {
         initialise([&](float x) {return (x * rando.nextFloat()); });
-    }
+    }*/
     }
 }

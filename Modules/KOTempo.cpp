@@ -27,15 +27,13 @@ juce::StringArray KOTempo::getModdedNoteTypes()
 }
 
 //Sets the BPM for the module. If this isn't set, then the get methods won't work properly.
-void KOTempo::prepare(float bpm)
+void KOTempo::setBPM(float bpm)
 {
     BPM = bpm;
 }
 
-//set the samplerate as well if you want the ms duration of notes. 
-void KOTempo::prepare(float bpm, float samplerate)
+void KOTempo::setSampleRate(float samplerate)
 {
-    BPM = bpm;
     sampleRate = samplerate;
 }
 
@@ -198,3 +196,4 @@ float KOTempo::getNoteLengthMS(NoteTypes type)
     // Convert the duration from seconds to milliseconds and return it
     return round(noteDuration * 1000);
 }
+

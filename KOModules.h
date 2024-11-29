@@ -17,5 +17,4 @@
 //KO Modules
 #include "Modules/KOLFO.h"
 #include"Modules/KOTempo.h"
-#include "Modules/fast_sin.h"
 
